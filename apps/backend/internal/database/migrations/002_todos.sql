@@ -5,7 +5,7 @@ CREATE TABLE todo_categories (
     
     user_id TEXT NOT NULL,
     name TEXT NOT NULL,
-    color TEXT DEFAULT '#6b7280',
+    color TEXT NOT NULL DEFAULT '#6b7280',
     description TEXT
 );
 
