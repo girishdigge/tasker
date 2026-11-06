@@ -10,17 +10,17 @@ import (
 	"github.com/girishdigge/tasker/internal/errs"
 	"github.com/girishdigge/tasker/internal/model"
 	"github.com/girishdigge/tasker/internal/model/todo"
+	"github.com/girishdigge/tasker/internal/server"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type TodoRepository struct {
-	db *pgxpool.Pool
+	server *server.Server
 }
 
-func NewTodoRepository(db *pgxpool.Pool) *TodoRepository {
-	return &TodoRepository{db: db}
+func NewTodoRepository(server *server.Server) *TodoRepository {
+	return &TodoRepository{server: server}
 }
 
 func (r *TodoRepository) CreateTodo(ctx context.Context, userID string, payload *todo.CreateTodoPayload) (*todo.Todo, error) {
@@ -55,7 +55,7 @@ func (r *TodoRepository) CreateTodo(ctx context.Context, userID string, payload 
 		priority = *payload.Priority
 	}
 
-	rows, err := r.db.Query(ctx, stmt, pgx.NamedArgs{
+	rows, err := r.server.DB.Pool.Query(ctx, stmt, pgx.NamedArgs{
 		"user_id":        userID,
 		"title":          payload.Title,
 		"description":    payload.Description,
@@ -136,7 +136,7 @@ func (r *TodoRepository) GetTodoByID(ctx context.Context, userID string, todoID 
 		c.id
 `
 
-	rows, err := r.db.Query(ctx, stmt, pgx.NamedArgs{
+	rows, err := r.server.DB.Pool.Query(ctx, stmt, pgx.NamedArgs{
 		"id":      todoID,
 		"user_id": userID,
 	})
@@ -163,7 +163,7 @@ func (r *TodoRepository) CheckTodoExists(ctx context.Context, userID string, tod
 			AND user_id=@user_id
 	`
 
-	rows, err := r.db.Query(ctx, stmt, pgx.NamedArgs{
+	rows, err := r.server.DB.Pool.Query(ctx, stmt, pgx.NamedArgs{
 		"id":      todoID,
 		"user_id": userID,
 	})
@@ -297,7 +297,7 @@ func (r *TodoRepository) GetTodos(ctx context.Context, userID string, query *tod
 	}
 
 	var total int
-	err := r.db.QueryRow(ctx, countStmt, args).Scan(&total)
+	err := r.server.DB.Pool.QueryRow(ctx, countStmt, args).Scan(&total)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get total count for todos user_id=%s: %w", userID, err)
 	}
@@ -319,7 +319,7 @@ func (r *TodoRepository) GetTodos(ctx context.Context, userID string, query *tod
 	args["limit"] = *query.Limit
 	args["offset"] = (*query.Page - 1) * (*query.Limit)
 
-	rows, err := r.db.Query(ctx, stmt, args)
+	rows, err := r.server.DB.Pool.Query(ctx, stmt, args)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute get todos query for user_id=%s: %w", userID, err)
 	}
@@ -410,7 +410,7 @@ func (r *TodoRepository) UpdateTodo(ctx context.Context, userID string, payload 
 	stmt += strings.Join(setClauses, ", ")
 	stmt += " WHERE id = @todo_id AND user_id = @user_id RETURNING *"
 
-	rows, err := r.db.Query(ctx, stmt, args)
+	rows, err := r.server.DB.Pool.Query(ctx, stmt, args)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
@@ -431,7 +431,7 @@ func (r *TodoRepository) DeleteTodo(ctx context.Context, userID string, todoID u
 			AND user_id=@user_id
 	`
 
-	result, err := r.db.Exec(ctx, stmt, pgx.NamedArgs{
+	result, err := r.server.DB.Pool.Exec(ctx, stmt, pgx.NamedArgs{
 		"todo_id": todoID,
 		"user_id": userID,
 	})
@@ -483,7 +483,7 @@ func (r *TodoRepository) GetTodoStats(ctx context.Context, userID string) (*todo
 			user_id=@user_id
 	`
 
-	rows, err := r.db.Query(ctx, stmt, pgx.NamedArgs{
+	rows, err := r.server.DB.Pool.Query(ctx, stmt, pgx.NamedArgs{
 		"user_id": userID,
 	})
 	if err != nil {
