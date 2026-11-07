@@ -5,6 +5,7 @@ import (
 
 	"github.com/girishdigge/tasker/internal/handler"
 	"github.com/girishdigge/tasker/internal/middleware"
+	v1 "github.com/girishdigge/tasker/internal/router/v1"
 	"github.com/girishdigge/tasker/internal/server"
 	"github.com/girishdigge/tasker/internal/service"
 	"github.com/labstack/echo/v5"
@@ -47,10 +48,13 @@ func NewRouter(s *server.Server, h *handler.Handlers, services *service.Services
 		middlewares.Global.Recover(),
 	)
 
-	//register system routes
+	// register system routes
 	registerSystemRoutes(router, h)
 
-	//register versioned routes
-	router.Group("/api/v1")
+	// register versioned routes
+	v1Router := router.Group("/api/v1")
+
+	v1.RegisterV1Routes(v1Router, h, middlewares)
+
 	return router
 }
