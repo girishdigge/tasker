@@ -571,6 +571,95 @@
         }
       }
     },
+    "/api/v1/comments/{id}": {
+      "patch": {
+        "operationId": "updateComment",
+        "summary": "Update a comment",
+        "description": "Update a comment owned by the authenticated user.",
+        "tags": [
+          "Comments"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  }
+                },
+                "required": [
+                  "content"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comment updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodoCommentOutput"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteComment",
+        "summary": "Delete a comment",
+        "description": "Delete a comment owned by the authenticated user.",
+        "tags": [
+          "Comments"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Comment deleted successfully. No response body."
+          }
+        }
+      }
+    },
     "/api/v1/categories": {
       "get": {
         "operationId": "getCategories",
@@ -841,13 +930,13 @@
         }
       }
     },
-    "/api/v1/comments/{id}": {
-      "patch": {
-        "operationId": "updateComment",
-        "summary": "Update a comment",
-        "description": "Update a comment owned by the authenticated user.",
+    "/api/v1/todos/{id}/attachments": {
+      "post": {
+        "operationId": "uploadTodoAttachment",
+        "summary": "Upload attachment to todo",
+        "description": "Upload a file attachment to a todo owned by the authenticated user.",
         "tags": [
-          "Comments"
+          "Todos"
         ],
         "security": [
           {
@@ -869,42 +958,45 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "content": {
+                  "file": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 1000
+                    "format": "binary",
+                    "contentEncoding": "binary",
+                    "description": "File to upload and attach to the todo."
                   }
                 },
                 "required": [
-                  "content"
+                  "file"
                 ]
               }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "Comment updated successfully.",
+          "201": {
+            "description": "Attachment uploaded successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TodoCommentOutput"
+                  "$ref": "#/components/schemas/TodoAttachmentOutput"
                 }
               }
             }
           }
         }
-      },
+      }
+    },
+    "/api/v1/todos/{id}/attachments/{attachmentId}": {
       "delete": {
-        "operationId": "deleteComment",
-        "summary": "Delete a comment",
-        "description": "Delete a comment owned by the authenticated user.",
+        "operationId": "deleteTodoAttachment",
+        "summary": "Delete todo attachment",
+        "description": "Delete an attachment belonging to a todo owned by the authenticated user.",
         "tags": [
-          "Comments"
+          "Todos"
         ],
         "security": [
           {
@@ -921,11 +1013,80 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             },
             "required": true
+          },
+          {
+            "in": "path",
+            "name": "attachmentId",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "required": true
           }
         ],
         "responses": {
           "204": {
-            "description": "Comment deleted successfully. No response body."
+            "description": "Attachment deleted successfully. No response body."
+          }
+        }
+      }
+    },
+    "/api/v1/todos/{id}/attachments/{attachmentId}/download": {
+      "get": {
+        "operationId": "getAttachmentPresignedURL",
+        "summary": "Get attachment download URL",
+        "description": "Generate a presigned URL to download an attachment belonging to a todo owned by the authenticated user.",
+        "tags": [
+          "Todos"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "attachmentId",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Presigned attachment download URL.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
           }
         }
       }

@@ -1,6 +1,7 @@
 import {
   ZPopulatedTodo,
   ZTodo,
+  ZTodoAttachment,
   ZTodoMetadata,
   ZTodoPriority,
   ZTodoStatus,
@@ -19,6 +20,8 @@ export const ZPaginatedTodos = paginatedResponseSchema(ZPopulatedTodo);
  * names and basic types aligned with the Go JSON contract. Server-owned fields
  * (id, userId, timestamps, completedAt and sortOrder) are intentionally absent.
  */
+
+// Create todo
 export const createTodoRequestSchema = z.object({
   title: z.string().min(1).max(255),
   description: z.string().max(1000).nullable().optional(),
@@ -33,6 +36,8 @@ export const createTodoRequestSchema = z.object({
 // "unchanged". They do not yet distinguish an explicit JSON null from an
 // omitted field; nullable relationship/description clearing is therefore
 // intentionally not advertised here.
+
+// Update todo
 export const updateTodoRequestSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   description: z.string().max(1000).optional(),
@@ -44,10 +49,30 @@ export const updateTodoRequestSchema = z.object({
   metadata: ZTodoMetadata.optional(),
 });
 
+// Upload attachment
+export const uploadTodoAttachmentRequestSchema = z.object({
+  file: z.file().meta({
+    description: 'File to upload and attach to the todo.',
+  }),
+});
+
+// Download attachment response
+export const getAttachmentPresignedURLResponseSchema = z.object({
+  url: z.url(),
+});
+
+// Path parameter schemas
+
 const todoIDParams = z.object({
   id: z.uuid(),
 });
 
+const todoAttachmentParams = z.object({
+  id: z.uuid(),
+  attachmentId: z.uuid(),
+});
+
+// Todo collection
 export const todoCollectionPath = {
   get: {
     operationId: 'getTodos',
@@ -120,6 +145,7 @@ export const todoCollectionPath = {
   },
 };
 
+// Todo statistics
 export const todoStatsPath = {
   get: {
     operationId: 'getTodoStats',
@@ -141,6 +167,7 @@ export const todoStatsPath = {
   },
 };
 
+// Individual todo
 export const todoItemPath = {
   get: {
     operationId: 'getTodoById',
@@ -202,6 +229,99 @@ export const todoItemPath = {
     responses: {
       '204': {
         description: 'Todo deleted successfully. No response body.',
+      },
+    },
+  },
+};
+
+/**
+ * Todo attachment collection
+ *
+ * POST /api/v1/todos/{id}/attachments
+ */
+
+export const todoAttachmentCollectionPath = {
+  post: {
+    operationId: 'uploadTodoAttachment',
+    summary: 'Upload attachment to todo',
+    description:
+      'Upload a file attachment to a todo owned by the authenticated user.',
+    tags: ['Todos'],
+    security,
+    requestParams: {
+      path: todoIDParams,
+    },
+    requestBody: {
+      required: true,
+      content: {
+        'multipart/form-data': {
+          schema: uploadTodoAttachmentRequestSchema,
+        },
+      },
+    },
+    responses: {
+      '201': {
+        description: 'Attachment uploaded successfully.',
+        content: {
+          'application/json': {
+            schema: ZTodoAttachment,
+          },
+        },
+      },
+    },
+  },
+};
+
+/**
+ * Individual todo attachment
+ *
+ * DELETE /api/v1/todos/{id}/attachments/{attachmentId}
+ */
+
+export const todoAttachmentItemPath = {
+  delete: {
+    operationId: 'deleteTodoAttachment',
+    summary: 'Delete todo attachment',
+    description:
+      'Delete an attachment belonging to a todo owned by the authenticated user.',
+    tags: ['Todos'],
+    security,
+    requestParams: {
+      path: todoAttachmentParams,
+    },
+    responses: {
+      '204': {
+        description: 'Attachment deleted successfully. No response body.',
+      },
+    },
+  },
+};
+
+/**
+ * Download todo attachment
+ *
+ * GET /api/v1/todos/{id}/attachments/{attachmentId}/download
+ */
+
+export const todoAttachmentDownloadPath = {
+  get: {
+    operationId: 'getAttachmentPresignedURL',
+    summary: 'Get attachment download URL',
+    description:
+      'Generate a presigned URL to download an attachment belonging to a todo owned by the authenticated user.',
+    tags: ['Todos'],
+    security,
+    requestParams: {
+      path: todoAttachmentParams,
+    },
+    responses: {
+      '200': {
+        description: 'Presigned attachment download URL.',
+        content: {
+          'application/json': {
+            schema: getAttachmentPresignedURLResponseSchema,
+          },
+        },
       },
     },
   },
